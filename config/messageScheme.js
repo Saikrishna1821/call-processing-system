@@ -3,7 +3,7 @@ const createMessage = (callId, PhoneNumber) => {
     call_id: callId,
     phone_number: PhoneNumber,
     attempt: 1,
-    created_at: Date.now().toLocaleString()
+    created_at: new Date(Date.now()),
   };
 };
 module.exports = { createMessage };

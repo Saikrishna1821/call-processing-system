@@ -1,20 +1,24 @@
-const amqp = require('amqplib');
+const amqp = require("amqplib");
 
 const {
   RABBITMQ_URL,
-  EXCHANGE_NAME,
   QUEUE_NAME,
   RETRY_QUEUE,
   DLQ_QUEUE,
-} = require('../config/rabbitmq');
+} = require("../config/rabbitmq");
 
 const MAX_RETRY = 3;
+const WORKER_ID = process.pid;
+
+function shouldFail(phoneNumber) {
+  // Deterministic failure rule
+  return phoneNumber.startsWith("0");
+}
 
 async function startWorker() {
   const connection = await amqp.connect(RABBITMQ_URL);
   const channel = await connection.createChannel();
 
-  // Fair dispatch: one message at a time
   channel.prefetch(1);
 
   await channel.consume(
@@ -23,25 +27,25 @@ async function startWorker() {
       if (!msg) return;
 
       const content = JSON.parse(msg.content.toString());
-
-      console.log('Processing call:', content);
+      console.log(
+        `[Worker ${WORKER_ID}] Processing call`,
+        content.phone_number,
+        `attempt=${content.attempt}`
+      );
 
       try {
-        // Simulate outbound call (random failure)
-        const success = Math.random() > 0.3;
-
-        if (!success) {
-          throw new Error('Call failed');
+        if (shouldFail(content.phone_number)) {
+          throw new Error("Invalid phone number");
         }
 
-        console.log('Call successful:', content.call_id);
+        console.log(`[Worker ${WORKER_ID}] Call successful`, content.call_id);
         channel.ack(msg);
       } catch (err) {
         content.attempt += 1;
 
         if (content.attempt <= MAX_RETRY) {
           console.log(
-            `Retrying call ${content.call_id}, attempt ${content.attempt}`
+            `[Worker ${WORKER_ID}] Retrying call ${content.call_id}, attempt ${content.attempt}`
           );
 
           channel.sendToQueue(
@@ -50,23 +54,22 @@ async function startWorker() {
             { persistent: true }
           );
         } else {
-          console.log(`Moving call ${content.call_id} to DLQ`);
-
-          channel.sendToQueue(
-            DLQ_QUEUE,
-            Buffer.from(JSON.stringify(content)),
-            { persistent: true }
+          console.log(
+            `[Worker ${WORKER_ID}] Moving call ${content.call_id} to DLQ`
           );
+
+          channel.sendToQueue(DLQ_QUEUE, Buffer.from(JSON.stringify(content)), {
+            persistent: true,
+          });
         }
 
-        // Remove original message
         channel.ack(msg);
       }
     },
     { noAck: false }
   );
 
-  console.log('👷 Worker started and waiting for messages');
+  console.log(`👷 Worker ${WORKER_ID} started`);
 }
 
 startWorker();

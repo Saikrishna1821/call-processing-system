@@ -21,9 +21,11 @@ const publishCall = async (PhoneNumber) => {
       }
     );
     console.log("Published Call Successfully");
+    await channel.close();
+    await connection.close();
   } catch (error) {
     console.log("Failed to Publish Call", error);
   }
 };
 
-publishCall("12122121212");
+publishCall("8465092209");
