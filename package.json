@@ -1,0 +1,19 @@
+{
+  "name": "call-processing-system",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup:rabbit": "node config/setupRabbitMQ.js",
+    "start:producer": "node producer/producer.js",
+    "start:worker": "node worker/worker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "uuid": "^13.0.0"
+  }
+}
