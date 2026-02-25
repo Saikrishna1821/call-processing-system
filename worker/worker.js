@@ -38,7 +38,7 @@ async function startWorker() {
           throw new Error("Invalid phone number");
         }
 
-        console.log(`[Worker ${WORKER_ID}] Call successful`, content.call_id);
+        console.log(`[Worker ${WORKER_ID}] Call successfull`, content.call_id);
         channel.ack(msg);
       } catch (err) {
         content.attempt += 1;
